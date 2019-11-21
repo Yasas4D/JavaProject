@@ -1,0 +1,194 @@
+create database TaransactionTest;
+use TaransactionTest;
+
+CREATE TABLE Customer(
+ID INTEGER PRIMARY KEY,
+name  CHAR(64),
+addr CHAR(256),
+DOB CHAR(10),
+phone CHAR(30),
+username CHAR(16)UNIQUE,
+password CHAR(32));
+
+CREATE TABLE Account(
+AccNo INTEGER PRIMARY KEY,
+CustomerID INTEGER FOREIGN KEY REFERENCES Customer(ID),
+DateOpened datetime,
+Balance money CHECK(Balance>=0));
+
+create table product(
+ productNo varchar(6) primary key,
+ description1 varchar(50),
+ profit_margin int ,
+ qty_available int,
+ re_order_level int,
+ item_cost money,
+ selling_price money,
+ CONSTRAINT chk_Product CHECK (profit_margin>=0 AND profit_margin<=100)
+ );
+
+create table Sales_Order_Details
+(
+Sales_Order_No int primary key,
+Product_No varchar(6),
+Quantity int,
+constraint order_Details_fk foreign key(Sales_Order_No) references
+Sales_Order(Sales_Order_No),
+constraint order_Details_fk2 foreign key(Product_No) references Product(ProductNo)
+);
+
+INSERT INTO Customer(ID,name,addr,DOB,phone,username,password)VALUES
+(89682,'MaryL.Prieto','1465MarionDrive,Tampa,FL33602',
+'11/20/1961','813-487-4873','mlprieto','password2');
+
+INSERT INTO Account VALUES(100,31430,'12/04/2012',10000);
+
+
+--Transaction
+alter procedure myprc3
+	@source int,
+	@destination int,
+	@amount money,
+	@msg varchar(50) output
+as
+begin
+		begin transaction mybst
+
+	
+			update Account
+			set Balance=Balance-@amount
+			where AccNo=@source
+
+			if @@ROWCOUNT=0 goto myerorhndler
+	
+			update Account
+			set Balance=Balance+@amount
+			where AccNo=@destination
+
+			if @@ROWCOUNT=0 goto myerorhndler
+
+			commit transaction
+			set @msg='Transaction Completed..!!'
+			return
+			myerorhndler:
+				print 'error'
+				rollback transaction
+end
+
+declare @msgout varchar(50)
+exec myprc3 '100','101','1200',@msgout output
+print @msgout;
+
+
+--transaction over
+
+
+select distinct
+
+between
+
+group by
+
+like '%rat%'  '_a%' '[abc]' '[a-f]'
+
+having sum(salary)>1000
+
+order by desc
+
+DATENAME(DW,Sales_Order_Date) 
+
+getDate() 
+
+
+--Stored procedure--
+
+create procedure mypro4
+as
+begin
+
+			select Sales_Order_No,DATENAME(DW,Sales_Order_Date) as Order_Date
+			from Sales_Order
+end;
+
+exec mypro4;
+
+
+alter procedure mypro5
+@day varchar(20),
+@msg varchar(50) output
+as
+begin
+					
+		    select *
+			from Sales_Order
+			where DATENAME(DW,Sales_Order_Date)=@day
+			set @msg='hello world'
+			return 7
+			
+end;
+
+declare @val int
+declare @m varchar(50)
+exec @val=mypro5 'Monday',@m output
+print @val
+print @m;
+
+
+alter procedure mypro7
+@clientNo varchar(6),
+@name varchar(20),
+@city varchar(20),
+@date_joined datetime,
+@balance_due money
+as
+begin
+			if(@balance_due>=0)
+			begin		
+		    insert into client values (@clientNo,@name,@city,@date_joined, @balance_due);
+			end
+
+			else
+			begin 
+			print 'balance should be non negative value'
+			end
+end;
+
+--trigeer--
+
+create trigger InsertclientTriger
+on client
+after insert
+as
+begin
+	declare @bal money
+	
+	select @bal = balance_due
+	from inserted
+
+	if @bal<0
+	begin 
+	rollback transaction
+	end
+end;
+create trigger que6_1
+on product
+after update
+as
+begin
+	declare @qtyavailable int
+	declare @reorderlevel int
+	declare @productno varchar(6)
+
+	select @qtyavailable=qty_available, @reorderlevel=re_order_level,@productno=productNo
+	from inserted
+
+				if(@qtyavailable<@reorderlevel)
+				Begin
+					declare @noticeno int
+					select @noticeno= max(NoticeNo)
+					from Items_to_Order
+					set @noticeno=@noticeno+1
+
+					insert into Items_to_Order values (@noticeno,@productno,GETDATE())
+				End
+end;
